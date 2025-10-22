@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>MindCode — платформа заботы о психическом здоровье</title>
+  <style>
+    :root{--bg:#fafafa;--card:#fff;--accent:#4b6cf7;--muted:#6b7280}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter, system-ui, -apple-system, Arial; background:var(--bg); color:#111}
+    header{background:linear-gradient(90deg,var(--accent),#6fb8f5);color:white;padding:28px 20px}
+    .container{max-width:980px;margin:28px auto;padding:0 16px}
+    h1{margin:0;font-size:28px}
+    p.lead{margin:8px 0 0;color:rgba(255,255,255,0.9)}
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+    @media(max-width:800px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 6px 18px rgba(23,23,23,0.06)}
+    .block-title{font-size:20px;margin:0 0 12px;color:#111}
+    label{display:block;margin:8px 0 4px;color:var(--muted);font-size:14px}
+    input[type=range]{width:100%}
+    button{background:var(--accent);color:white;border:0;padding:10px 14px;border-radius:8px;cursor:pointer}
+    small{color:var(--muted)}
+    .result{padding:12px;border-radius:8px;background:#f3f7ff;border:1px solid rgba(75,108,247,0.08)}
+    .sessions-list{max-height:160px;overflow:auto;padding:6px;border-radius:6px;border:1px dashed #e6e9f7}
+    .note{font-size:13px;color:var(--muted)}
+    footer{margin:36px 0;text-align:center;color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>MindCode</h1>
+      <p class="lead">Инструмент самодиагностики, персональных рекомендаций, записи на сессии и цифрового ассистента для перерывов.</p>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="grid">
+      <!-- Block 1: Self-diagnosis -->
+      <article class="card" id="block1">
+        <h2 class="block-title">Блок 1: Самодиагностика</h2>
+        <p class="note">Короткий опрос эмоционального состояния (стресс, усталость, цинизм). Перетащите ползунки и нажмите "Оценить".</p>
+        <form id="diagForm">
+          <label for="stress">Стресс: <span id="stressVal">3</span>/10</label>
+          <input type="range" id="stress" name="stress" min="0" max="10" value="3">
+
+          <label for="fatigue">Усталость: <span id="fatigueVal">4</span>/10</label>
+          <input type="range" id="fatigue" name="fatigue" min="0" max="10" value="4">
+
+          <label for="cynic">Цинизм / Отстранённость: <span id="cynicVal">2</span>/10</label>
+          <input type="range" id="cynic" name="cynic" min="0" max="10" value="2">
+
+          <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+            <button type="button" id="evaluate">Оценить</button>
+            <button type="button" id="saveDiag">Сохранить (локально)</button>
+            <small id="diagSaved" style="display:none;margin-left:8px;color:green">Сохранено!</small>
+          </div>
+        </form>
+
+        <div style="margin-top:12px" id="diagResult" class="result" hidden>
+          <strong>Результат:</strong>
+          <p id="diagText"></p>
+        </div>
+      </article>
+
+      <!-- Block 2: Personal recommendations -->
+      <article class="card" id="block2">
+        <h2 class="block-title">Блок 2: Персональные рекомендации</h2>
+        <p class="note">Автоматическое формирование индивидуального плана действий и подбор техник (медитация, упражнения).</p>
+        <div id="recoBox" class="result">
+          <p id="recoIntro">Заполните самодиагностику, чтобы получить персональные рекомендации.</p>
+          <ul id="recoList"></ul>
+        </div>
+      </article>
+
+      <!-- Block 3: Weekly sessions -->
+      <article class="card" id="block3">
+        <h2 class="block-title">Блок 3: Еженедельные сессии</h2>
+        <p class="note">Возможность записаться на групповую или индивидуальную онлайн-встречу с модератором/психологом.</p>
+
+        <div style="display:flex;gap:12px;flex-direction:column">
+          <label>Выберите тип сессии</label>
+          <select id="sessionType">
+            <option value="group">Групповая</option>
+            <option value="individual">Индивидуальная</option>
+          </select>
+
+          <label>Дата и время</label>
+          <input type="datetime-local" id="sessionDatetime">
+
+          <label>Ваше имя</label>
+          <input type="text" id="sessionName" placeholder="Иван Иванов">
+
+          <div style="display:flex;gap:8px">
+            <button id="bookSession">Записаться</button>
+            <button id="exportSessions">Экспорт CSV</button>
+          </div>
+
+          <h4 style="margin:8px 0 4px">Записи</h4>
+          <div class="sessions-list" id="sessionsList">Нет записей</div>
+        </div>
+      </article>
+
+      <!-- Block 4: Digital assistant -->
+      <article class="card" id="block4">
+        <h2 class="block-title">Блок 4: Цифровой ассистент</h2>
+        <p class="note">Напоминания о необходимости перерывов и сменах деятельности, встроенные в рабочий процесс.</p>
+
+        <label>Интервал напоминаний (минут)</label>
+        <input type="number" id="remInterval" min="5" max="240" value="60">
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button id="startRem">Включить напоминания</button>
+          <button id="stopRem">Остановить</button>
+        </div>
+        <p class="note">Браузер запросит разрешение на уведомления.</p>
+        <div id="remStatus" style="margin-top:8px" class="note">Отключено</div>
+      </article>
+
+    </section>
+
+    <footer>
+      MindCode • простая MVP-версия — при желании добавлю бэкенд для хранения и авторизации.
+    </footer>
+  </main>
+
+  <script>
+    // Helpers for Block 1
+    const stress = document.getElementById('stress');
+    const fatigue = document.getElementById('fatigue');
+    const cynic = document.getElementById('cynic');
+    const stressVal = document.getElementById('stressVal');
+    const fatigueVal = document.getElementById('fatigueVal');
+    const cynicVal = document.getElementById('cynicVal');
+
+    [stress, fatigue, cynic].forEach(el => {
+      el.addEventListener('input', e => {
+        document.getElementById(e.target.id + 'Val').innerText = e.target.value;
+      });
+    });
+
+    document.getElementById('evaluate').addEventListener('click', ()=>{
+      const s = +stress.value, f = +fatigue.value, c = +cynic.value;
+      const score = Math.round((s + f + c) / 3);
+      const diagResult = document.getElementById('diagResult');
+      const diagText = document.getElementById('diagText');
+      diagResult.hidden = false;
+      let text = '';
+      if(score <= 3) text = 'Низкий уровень стресса — вы в хорошей зоне. Поддерживайте режим сна и активность.';
+      else if(score <= 6) text = 'Умеренный уровень — стоит добавить регулярные короткие перерывы, дыхательные практики и лёгкую физическую активность.';
+      else text = 'Высокий уровень — рекомендовано сократить нагрузку, проконсультироваться с психологом и перейти на план восстановления (см. рекомендации).';
+      diagText.innerText = `Итоговый балл: ${score}/10. ` + text;
+
+      // Fill recommendations automatically
+      generateRecommendations(score);
+    });
+
+    document.getElementById('saveDiag').addEventListener('click', ()=>{
+      const data = {stress:stress.value, fatigue:fatigue.value, cynic:cynic.value, at: new Date().toISOString()};
+      const arr = JSON.parse(localStorage.getItem('mindcode_diags') || '[]');
+      arr.push(data);
+      localStorage.setItem('mindcode_diags', JSON.stringify(arr));
+      const f = document.getElementById('diagSaved');
+      f.style.display = 'inline';
+      setTimeout(()=>f.style.display='none',2000);
+    });
+
+    function generateRecommendations(score){
+      const list = document.getElementById('recoList');
+      list.innerHTML = '';
+      const intro = document.getElementById('recoIntro');
+      intro.innerText = 'Персональный план на основе последней самодиагностики:';
+      const recos = [];
+      if(score <= 3){
+        recos.push('Короткие 5-10 мин медитации 3 раза в неделю');
+        recos.push('Поддерживать режим сна: 7-8 часов');
+        recos.push('Лёгкая растяжка по утрам');
+      } else if(score <=6){
+        recos.push('Дыхательные упражнения 3–5 минут при ощущении тревоги');
+        recos.push('2–3 перерыва по 10 минут каждые 90 минут работы');
+        recos.push('Короткая прогулка 20 минут после работы');
+      } else {
+        recos.push('Ежедневная 15–20 минутная медитация (приложения Headspace/Insight)');
+        recos.push('Запись к специалисту — рекомендую использовать раздел "Еженедельные сессии"');
+        recos.push('Снижение объёма задач и распределение приоритетов на 2 недели');
+      }
+      recos.forEach(r=>{const li=document.createElement('li');li.innerText=r;list.appendChild(li)});
+    }
+
+    // On load, try to restore last diag
+    (function restoreLast(){
+      const arr = JSON.parse(localStorage.getItem('mindcode_diags') || '[]');
+      if(arr.length){
+        const last = arr[arr.length-1];
+        stress.value = last.stress; fatigue.value = last.fatigue; cynic.value = last.cynic;
+        stressVal.innerText = last.stress; fatigueVal.innerText = last.fatigue; cynicVal.innerText = last.cynic;
+        // evaluate automatically
+        document.getElementById('evaluate').click();
+      }
+    })();
+
+    // Block 3: sessions
+    const sessionsKey = 'mindcode_sessions';
+    function loadSessions(){
+      const arr = JSON.parse(localStorage.getItem(sessionsKey) || '[]');
+      const box = document.getElementById('sessionsList');
+      box.innerHTML='';
+      if(!arr.length){box.innerText='Нет записей';return}
+      arr.forEach((s,idx)=>{
+        const d = document.createElement('div');
+        d.style.padding='8px';d.style.borderBottom='1px solid #f1f4ff';
+        d.innerHTML = `<strong>${s.type==='group'?'Группа':'Индивидуально'}</strong> — ${new Date(s.datetime).toLocaleString()}<br><small>${s.name}</small> <button data-idx="${idx}" style="float:right">Удалить</button>`;
+        box.appendChild(d);
+      });
+      // attach delete handlers
+      box.querySelectorAll('button[data-idx]').forEach(b=>b.addEventListener('click',e=>{
+        const idx = +e.target.getAttribute('data-idx');
+        const arr = JSON.parse(localStorage.getItem(sessionsKey) || '[]');
+        arr.splice(idx,1);localStorage.setItem(sessionsKey,JSON.stringify(arr));loadSessions();
+      }));
+    }
+    loadSessions();
+
+    document.getElementById('bookSession').addEventListener('click', ()=>{
+      const type = document.getElementById('sessionType').value;
+      const datetime = document.getElementById('sessionDatetime').value;
+      const name = document.getElementById('sessionName').value.trim();
+      if(!datetime || !name){alert('Пожалуйста, укажите дату/время и ваше имя.'); return}
+      const arr = JSON.parse(localStorage.getItem(sessionsKey) || '[]');
+      arr.push({type,datetime,name});
+      localStorage.setItem(sessionsKey,JSON.stringify(arr));
+      loadSessions();
+      alert('Вы записаны!');
+    });
+
+    document.getElementById('exportSessions').addEventListener('click', ()=>{
+      const arr = JSON.parse(localStorage.getItem(sessionsKey) || '[]');
+      if(!arr.length){alert('Нет записей для экспорта');return}
+      const rows = [['type','datetime','name'], ...arr.map(a=>[a.type,a.datetime,a.name])];
+      const csv = rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='mindcode_sessions.csv'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // Block 4: reminders
+    let remTimer = null;
+    let remIntervalMin = 60;
+    const remStatus = document.getElementById('remStatus');
+
+    async function notifyMe(title, body){
+      if(!('Notification' in window)) return alert('Уведомления не поддерживаются вашим браузером');
+      if(Notification.permission === 'default') await Notification.requestPermission();
+      if(Notification.permission === 'granted'){
+        new Notification(title, {body});
+      } else {
+        // fallback: alert small
+        alert(title + '\n' + body);
+      }
+    }
+
+    document.getElementById('startRem').addEventListener('click', ()=>{
+      remIntervalMin = Math.max(5, Math.min(240, +document.getElementById('remInterval').value || 60));
+      if(remTimer) clearInterval(remTimer);
+      remTimer = setInterval(()=>{
+        notifyMe('MindCode: время сделать перерыв', 'Сделайте 5–10 минутную паузу: потянитесь, пройдитесь, глубоко вдохните.');
+      }, remIntervalMin * 60 * 1000);
+      remStatus.innerText = `Напоминания включены каждые ${remIntervalMin} минут`;
+      // show immediate reminder
+      notifyMe('MindCode активирован', `Напоминания будут каждые ${remIntervalMin} минут.`);
+    });
+
+    document.getElementById('stopRem').addEventListener('click', ()=>{
+      if(remTimer) clearInterval(remTimer); remTimer = null; remStatus.innerText='Отключено';
+    });
+
+    // Optional: gentle onbeforeunload reminder
+    window.addEventListener('beforeunload', (e)=>{
+      // save small state
+      localStorage.setItem('mindcode_last_visit', new Date().toISOString());
+    });
+
+  </script>
+</body>
+</html>
